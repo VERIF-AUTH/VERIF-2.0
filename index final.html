@@ -1,0 +1,1061 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="VERIF">
+<meta name="theme-color" content="#080808">
+<link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' fill='%23080808' rx='22'/><circle cx='20' cy='50' r='8' fill='%23f0f0f0'/><text x='32' y='58' font-family='monospace' font-size='28' font-weight='bold' fill='%23f0f0f0' letter-spacing='3'>VERIF</text></svg>">
+<link rel="manifest" href="manifest.json">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+:root{
+  --black:#080808;--card:#141414;
+  --border:#1f1f1f;--border2:#2a2a2a;
+  --text:#f0f0f0;--muted:#555;--dim:#2e2e2e;
+  --green:#00e87a;--gdim:rgba(0,232,122,.08);--gglow:rgba(0,232,122,.18);
+  --mono:'Space Mono',monospace;--sans:'Inter',system-ui,sans-serif;
+}
+html,body{background:var(--black);color:var(--text);font-family:var(--sans);min-height:100vh;-webkit-font-smoothing:antialiased;}
+input,textarea,select,button{font-family:var(--sans);}
+
+.shell{max-width:480px;margin:0 auto;min-height:100vh;display:flex;flex-direction:column;padding-bottom:40px;}
+
+/* TOPBAR — fixed overlap: dot + name left, version right, NO live badge overlapping */
+.topbar{display:flex;align-items:center;padding:18px 20px;border-bottom:1px solid var(--border);gap:8px;position:sticky;top:0;background:rgba(8,8,8,.95);z-index:100;backdrop-filter:blur(12px);}
+.topbar-mark{width:7px;height:7px;background:var(--text);border-radius:50%;flex-shrink:0;}
+.topbar-name{font-family:var(--mono);font-size:13px;letter-spacing:.18em;}
+.topbar-right{margin-left:auto;display:flex;align-items:center;gap:8px;}
+.live-dot{width:5px;height:5px;background:var(--green);border-radius:50%;animation:livePulse 2s infinite;flex-shrink:0;}
+@keyframes livePulse{0%,100%{opacity:1;}50%{opacity:.4;}}
+.topbar-ver{font-family:var(--mono);font-size:9px;color:var(--muted);letter-spacing:.1em;}
+
+/* SCREENS */
+.screen{padding:24px 20px;display:none;flex-direction:column;gap:20px;}
+.screen.active{display:flex;}
+.eyebrow{font-family:var(--mono);font-size:9px;letter-spacing:.18em;color:var(--muted);text-transform:uppercase;margin-bottom:5px;}
+.screen-title{font-size:22px;font-weight:500;letter-spacing:-.03em;line-height:1.15;}
+.screen-sub{font-size:13px;color:var(--muted);margin-top:4px;line-height:1.5;}
+
+/* FIELDS */
+.field{display:flex;flex-direction:column;gap:7px;}
+.field-label{font-family:var(--mono);font-size:9px;letter-spacing:.14em;color:var(--muted);text-transform:uppercase;}
+.field-input{width:100%;background:var(--card);border:1px solid var(--border2);border-radius:10px;padding:13px 15px;color:var(--text);font-size:14px;outline:none;transition:border-color .2s;-webkit-appearance:none;appearance:none;}
+.field-input::placeholder{color:var(--muted);}
+.field-input:focus{border-color:rgba(0,232,122,.35);}
+.fields-row{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+
+/* CONDITION */
+.condition-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;}
+.cond-btn{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:10px 8px;text-align:center;cursor:pointer;transition:border-color .15s,background .15s;-webkit-tap-highlight-color:transparent;user-select:none;}
+.cond-btn.selected{border-color:rgba(0,232,122,.4);background:var(--gdim);}
+.cond-emoji{font-size:18px;display:block;margin-bottom:4px;}
+.cond-label{font-family:var(--mono);font-size:9px;color:var(--muted);letter-spacing:.06em;display:block;}
+.cond-btn.selected .cond-label{color:var(--green);}
+
+/* UPLOAD */
+.upload-zone{border:1px dashed var(--border2);border-radius:14px;padding:36px 20px;display:flex;flex-direction:column;align-items:center;gap:12px;cursor:pointer;position:relative;transition:border-color .2s,background .2s;-webkit-tap-highlight-color:transparent;}
+.upload-zone:hover,.upload-zone.drag{border-color:rgba(0,232,122,.3);background:rgba(0,232,122,.02);}
+.upload-zone .uz-label{position:absolute;inset:0;cursor:pointer;display:block;z-index:1;}
+.upload-zone input[type=file]{position:absolute;width:1px;height:1px;opacity:0;pointer-events:none;}
+.upload-icon-box{width:52px;height:52px;border:1px solid var(--border2);border-radius:13px;display:flex;align-items:center;justify-content:center;color:var(--muted);pointer-events:none;}
+.upload-icon-box svg{width:22px;height:22px;}
+.upload-label-text{font-size:14px;color:#888;pointer-events:none;}
+.upload-formats{font-family:var(--mono);font-size:10px;color:var(--muted);letter-spacing:.08em;pointer-events:none;}
+
+/* PHOTO GRID */
+.photo-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;}
+.photo-thumb{border-radius:10px;overflow:hidden;border:1px solid var(--border);position:relative;aspect-ratio:1;}
+.photo-thumb img{width:100%;height:100%;object-fit:cover;display:block;}
+.rm-btn{position:absolute;top:5px;right:5px;width:24px;height:24px;background:rgba(0,0,0,.75);border:1px solid var(--border2);border-radius:50%;display:flex;align-items:center;justify-content:center;cursor:pointer;color:#aaa;font-size:11px;z-index:2;-webkit-tap-highlight-color:transparent;}
+.rm-btn:active{background:rgba(200,40,40,.8);color:#fff;}
+.add-more-cell{border-radius:10px;overflow:hidden;border:1px dashed var(--border2);position:relative;aspect-ratio:1;background:var(--card);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;color:var(--muted);-webkit-tap-highlight-color:transparent;}
+.add-more-cell .am-label{position:absolute;inset:0;cursor:pointer;display:block;}
+.add-more-cell input[type=file]{position:absolute;width:1px;height:1px;opacity:0;pointer-events:none;}
+.add-more-cell svg{width:18px;height:18px;pointer-events:none;}
+.add-more-cell span{font-family:var(--mono);font-size:9px;letter-spacing:.08em;pointer-events:none;}
+.photo-count{font-family:var(--mono);font-size:10px;color:var(--muted);text-align:center;}
+
+/* TICK CHECKLIST */
+.tick-list{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+.tick-item{display:flex;align-items:center;gap:10px;background:var(--card);border:1px solid var(--border);border-radius:10px;padding:11px 13px;cursor:pointer;-webkit-tap-highlight-color:transparent;user-select:none;transition:border-color .15s;}
+.tick-item.checked{border-color:rgba(0,232,122,.3);background:var(--gdim);}
+.tick-box{width:18px;height:18px;border-radius:5px;border:1.5px solid var(--border2);display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:background .15s,border-color .15s;}
+.tick-item.checked .tick-box{background:var(--green);border-color:var(--green);}
+.tick-check{display:none;width:10px;height:10px;}
+.tick-item.checked .tick-check{display:block;}
+.tick-text{font-size:12px;color:var(--muted);line-height:1.3;transition:color .15s;}
+.tick-item.checked .tick-text{color:var(--text);}
+
+/* STATS */
+.stats-row{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;}
+.stat-card{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:13px 12px;}
+.stat-label{font-family:var(--mono);font-size:8px;letter-spacing:.12em;color:var(--muted);text-transform:uppercase;margin-bottom:5px;}
+.stat-val{font-size:18px;font-weight:500;letter-spacing:-.02em;}
+
+/* BUTTONS */
+.btn{width:100%;padding:15px;border-radius:10px;border:none;font-family:var(--mono);font-size:11px;letter-spacing:.14em;text-transform:uppercase;cursor:pointer;transition:opacity .15s,transform .1s;-webkit-tap-highlight-color:transparent;}
+.btn:active{transform:scale(.98);}
+.btn-primary{background:var(--text);color:var(--black);font-weight:700;display:none;}
+.btn-primary:hover{opacity:.88;}
+.btn-ghost{background:transparent;color:var(--muted);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;gap:8px;}
+.btn-ghost:hover{border-color:var(--border2);color:#888;}
+.btn-green{background:var(--green);color:#000;display:flex;align-items:center;justify-content:center;gap:8px;font-weight:700;}
+.btn-green:hover{opacity:.88;}
+
+/* SCAN */
+.scan-strip{display:flex;gap:7px;overflow-x:auto;padding-bottom:2px;scrollbar-width:none;}
+.scan-strip::-webkit-scrollbar{display:none;}
+.strip-thumb{border-radius:9px;overflow:hidden;border:1px solid var(--border);position:relative;flex-shrink:0;width:72px;height:72px;}
+.strip-thumb img{width:100%;height:100%;object-fit:cover;display:block;}
+.strip-thumb.current{border-color:rgba(0,232,122,.5);}
+.strip-chip{position:absolute;bottom:4px;left:4px;right:4px;background:rgba(0,0,0,.8);border-radius:3px;font-family:var(--mono);font-size:7px;color:var(--green);text-align:center;padding:2px 0;letter-spacing:.06em;}
+.scan-main{border-radius:14px;overflow:hidden;border:1px solid var(--border);position:relative;}
+.scan-main img{width:100%;max-height:200px;object-fit:cover;display:block;}
+.scan-overlay{position:absolute;inset:0;background:rgba(0,232,122,.03);pointer-events:none;}
+.scan-beam{position:absolute;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,var(--green) 30%,rgba(0,232,122,.5) 50%,var(--green) 70%,transparent);box-shadow:0 0 10px 2px var(--gglow);top:0;animation:beam 2s cubic-bezier(.4,0,.6,1) infinite;pointer-events:none;}
+@keyframes beam{0%{top:0%;opacity:0}5%{opacity:1}95%{opacity:1}100%{top:100%;opacity:0}}
+.scan-corner{position:absolute;width:14px;height:14px;border-color:var(--green);border-style:solid;opacity:.8;pointer-events:none;}
+.scan-corner.tl{top:8px;left:8px;border-width:1.5px 0 0 1.5px;}
+.scan-corner.tr{top:8px;right:8px;border-width:1.5px 1.5px 0 0;}
+.scan-corner.bl{bottom:8px;left:8px;border-width:0 0 1.5px 1.5px;}
+.scan-corner.br{bottom:8px;right:8px;border-width:0 1.5px 1.5px 0;}
+.scan-status-row{display:flex;align-items:center;justify-content:space-between;}
+.scan-lbl{font-family:var(--mono);font-size:10px;letter-spacing:.1em;color:var(--green);}
+.scan-pct{font-family:var(--mono);font-size:10px;color:var(--muted);}
+.prog-track{height:1px;background:var(--border);border-radius:2px;overflow:hidden;margin-top:8px;}
+.prog-fill{height:100%;background:var(--green);width:0%;transition:width .5s ease;box-shadow:0 0 5px var(--green);}
+.checks-list{display:flex;flex-direction:column;gap:7px;}
+.check-row{display:flex;align-items:center;gap:11px;background:var(--card);border:1px solid var(--border);border-radius:10px;padding:11px 13px;transition:border-color .3s;}
+.check-row.active{border-color:rgba(0,232,122,.2);}
+.check-row.done{border-color:rgba(0,232,122,.1);}
+.check-ico{width:26px;height:26px;border-radius:7px;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:background .3s,color .3s;}
+.check-ico.idle{background:var(--border);color:var(--muted);}
+.check-ico.active{background:var(--gdim);color:var(--green);animation:blink .7s infinite;}
+.check-ico.done{background:var(--gdim);color:var(--green);}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.3}}
+.check-info{flex:1;min-width:0;}
+.check-name{font-size:12px;color:#aaa;}
+.check-sub{font-family:var(--mono);font-size:9px;color:var(--muted);margin-top:2px;letter-spacing:.04em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.check-val{font-family:var(--mono);font-size:10px;color:var(--muted);flex-shrink:0;opacity:0;transition:opacity .4s;}
+.check-val.show{opacity:1;color:var(--green);}
+
+/* RESULT */
+.result-hero{display:flex;align-items:center;gap:16px;padding:18px;border-radius:14px;border:1px solid rgba(0,232,122,.15);background:var(--card);position:relative;overflow:hidden;}
+.result-hero::before{content:'';position:absolute;top:-60px;right:-60px;width:180px;height:180px;border-radius:50%;opacity:.05;background:var(--green);filter:blur(60px);pointer-events:none;}
+.result-emblem{width:62px;height:62px;border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0;background:var(--gdim);border:1.5px solid rgba(0,232,122,.3);}
+.result-emblem svg{width:26px;height:26px;}
+.result-info{flex:1;}
+.result-verdict{font-size:18px;font-weight:600;letter-spacing:-.02em;color:var(--green);}
+.result-by{font-size:11px;color:var(--muted);margin-top:3px;}
+.result-code{font-family:var(--mono);font-size:8px;color:var(--dim);letter-spacing:.1em;margin-top:5px;}
+.ring-wrap{position:relative;width:68px;height:68px;flex-shrink:0;}
+.ring-wrap svg{position:absolute;top:0;left:0;}
+.ring-inner{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;}
+.ring-num{font-family:var(--mono);font-size:15px;font-weight:700;line-height:1;color:var(--green);}
+.ring-unit{font-family:var(--mono);font-size:7px;color:var(--muted);letter-spacing:.08em;margin-top:2px;}
+
+.info-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+.info-card{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:12px 13px;}
+.info-card-label{font-family:var(--mono);font-size:8px;color:var(--muted);letter-spacing:.12em;text-transform:uppercase;margin-bottom:4px;}
+.info-card-val{font-size:13px;color:#ccc;font-weight:500;word-break:break-word;}
+
+.breakdown{display:flex;flex-direction:column;gap:6px;}
+.bd-row{display:flex;align-items:center;gap:10px;padding:10px 13px;background:var(--card);border:1px solid var(--border);border-radius:10px;}
+.bd-dot{width:5px;height:5px;border-radius:50%;background:var(--green);flex-shrink:0;}
+.bd-info{flex:1;min-width:0;}
+.bd-name{font-size:12px;color:#888;}
+.bd-sub{font-family:var(--mono);font-size:8px;color:var(--muted);margin-top:2px;}
+.bd-score{font-family:var(--mono);font-size:10px;color:var(--green);flex-shrink:0;}
+
+.tabs{display:flex;gap:2px;background:var(--card);border:1px solid var(--border);border-radius:10px;padding:3px;}
+.tab{flex:1;padding:9px;border-radius:8px;border:none;background:transparent;font-family:var(--mono);font-size:9px;letter-spacing:.08em;color:var(--muted);cursor:pointer;text-transform:uppercase;-webkit-tap-highlight-color:transparent;transition:background .15s,color .15s;}
+.tab.active{background:var(--border2);color:var(--text);}
+
+.share-actions{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+.share-btn{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:14px 12px;display:flex;flex-direction:column;align-items:center;gap:8px;cursor:pointer;-webkit-tap-highlight-color:transparent;transition:border-color .15s;}
+.share-btn:hover,.share-btn:active{border-color:var(--border2);}
+.share-btn svg{color:var(--muted);}
+.share-btn span{font-family:var(--mono);font-size:9px;color:var(--muted);letter-spacing:.08em;text-transform:uppercase;}
+
+.cert-banner{display:flex;align-items:flex-start;gap:13px;padding:14px;background:var(--card);border:1px solid var(--border);border-radius:12px;}
+.cert-icon{width:34px;height:34px;border-radius:8px;background:var(--gdim);border:1px solid rgba(0,232,122,.12);display:flex;align-items:center;justify-content:center;flex-shrink:0;color:var(--green);}
+.cert-icon svg{width:15px;height:15px;}
+.cert-text{font-size:11px;color:var(--muted);line-height:1.6;}
+.cert-text strong{color:#888;font-weight:500;}
+
+.sec-hdr{font-family:var(--mono);font-size:9px;letter-spacing:.14em;color:var(--muted);text-transform:uppercase;}
+.photo-chips{display:flex;gap:5px;flex-wrap:wrap;}
+.photo-chip{background:var(--card);border:1px solid var(--border);border-radius:6px;padding:5px 9px;font-family:var(--mono);font-size:9px;color:var(--muted);display:flex;align-items:center;gap:5px;}
+.pcdot{width:4px;height:4px;background:var(--green);border-radius:50%;}
+
+/* PHOTO GALLERY */
+.photo-gallery{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;}
+.gallery-thumb{border-radius:9px;overflow:hidden;border:1px solid var(--border);aspect-ratio:1;cursor:pointer;position:relative;-webkit-tap-highlight-color:transparent;}
+.gallery-thumb img{width:100%;height:100%;object-fit:cover;display:block;transition:transform .2s;}
+.gallery-thumb:active img{transform:scale(.97);}
+.gallery-thumb .g-num{position:absolute;bottom:4px;left:4px;background:rgba(0,0,0,.7);border-radius:4px;font-family:var(--mono);font-size:8px;color:#888;padding:2px 5px;letter-spacing:.06em;}
+
+/* LIGHTBOX */
+.lightbox{position:fixed;inset:0;background:rgba(0,0,0,.92);z-index:500;display:none;flex-direction:column;align-items:center;justify-content:center;padding:20px;}
+.lightbox.open{display:flex;}
+.lightbox-img{max-width:100%;max-height:80vh;border-radius:10px;object-fit:contain;}
+.lightbox-close{position:absolute;top:16px;right:16px;width:36px;height:36px;background:var(--card);border:1px solid var(--border2);border-radius:50%;display:flex;align-items:center;justify-content:center;cursor:pointer;color:#888;font-size:18px;-webkit-tap-highlight-color:transparent;}
+.lightbox-counter{font-family:var(--mono);font-size:10px;color:var(--muted);margin-top:12px;letter-spacing:.1em;}
+.lightbox-nav{display:flex;gap:10px;margin-top:14px;}
+.lb-btn{background:var(--card);border:1px solid var(--border2);border-radius:8px;padding:10px 18px;font-family:var(--mono);font-size:10px;color:var(--muted);cursor:pointer;-webkit-tap-highlight-color:transparent;transition:border-color .15s;}
+.lb-btn:active{border-color:var(--border2);color:var(--text);}
+
+/* SCORE BARS in checkpoints tab */
+.bd-bar-wrap{height:3px;background:var(--border);border-radius:2px;margin-top:5px;overflow:hidden;}
+.bd-bar-fill{height:100%;background:var(--green);border-radius:2px;width:0%;transition:width 1s cubic-bezier(.16,1,.3,1);}
+
+/* VERIFY TIME BADGE */
+.verify-time-badge{display:flex;align-items:center;gap:8px;padding:10px 14px;background:var(--card);border:1px solid var(--border);border-radius:10px;}
+.vtb-dot{width:6px;height:6px;background:var(--green);border-radius:50%;flex-shrink:0;}
+.vtb-text{font-family:var(--mono);font-size:10px;color:var(--muted);letter-spacing:.06em;}
+.vtb-text span{color:var(--green);}
+
+/* CONFIDENCE METER */
+.confidence-wrap{padding:14px;background:var(--card);border:1px solid var(--border);border-radius:12px;}
+.confidence-label-row{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:10px;}
+.confidence-title{font-size:12px;color:#aaa;}
+.confidence-pct{font-family:var(--mono);font-size:18px;font-weight:700;color:var(--green);}
+.confidence-track{height:6px;background:var(--border);border-radius:3px;overflow:hidden;}
+.confidence-fill{height:100%;background:linear-gradient(90deg,#00c060,var(--green));border-radius:3px;width:0%;transition:width 1.2s cubic-bezier(.16,1,.3,1);}
+.confidence-subs{display:flex;justify-content:space-between;margin-top:6px;}
+.confidence-sub{font-family:var(--mono);font-size:8px;color:var(--muted);letter-spacing:.06em;}
+
+.toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(20px);background:var(--card);border:1px solid var(--border2);border-radius:10px;padding:11px 18px;font-family:var(--mono);font-size:11px;color:var(--text);letter-spacing:.06em;opacity:0;transition:opacity .3s,transform .3s;z-index:999;white-space:nowrap;pointer-events:none;}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+</style>
+</head>
+<body>
+<div class="shell">
+<header class="topbar">
+  <div class="topbar-mark"></div>
+  <span class="topbar-name">VERIF</span>
+  <div class="topbar-right">
+    <div class="live-dot"></div>
+    <span class="topbar-ver">v2.5</span>
+  </div>
+</header>
+
+<!-- SCREEN 1: UPLOAD -->
+<div class="screen active" id="s-upload">
+  <div>
+    <p class="eyebrow">Step 01 / 03</p>
+    <h1 class="screen-title">Product<br>verification</h1>
+    <p class="screen-sub">Fill in the details and upload photos for a full authentication report.</p>
+  </div>
+
+  <div class="field">
+    <label class="field-label" for="descInput">Product description</label>
+    <input class="field-input" id="descInput" type="text" placeholder="e.g. Rick Owens DRKSHDW Ramones size 44" autocomplete="off">
+  </div>
+
+  <div class="fields-row">
+    <div class="field">
+      <label class="field-label" for="brandInput">Brand</label>
+      <input class="field-input" id="brandInput" type="text" placeholder="e.g. Nike" autocomplete="off">
+    </div>
+    <div class="field">
+      <label class="field-label" for="modelInput">Model / SKU</label>
+      <input class="field-input" id="modelInput" type="text" placeholder="e.g. DH2987-100" autocomplete="off">
+    </div>
+  </div>
+
+  <div class="field">
+    <label class="field-label">Item condition</label>
+    <div class="condition-grid">
+      <div class="cond-btn selected" data-cond="New with tags"><span class="cond-emoji">🏷️</span><span class="cond-label">New / tags</span></div>
+      <div class="cond-btn" data-cond="Like new"><span class="cond-emoji">✨</span><span class="cond-label">Like new</span></div>
+      <div class="cond-btn" data-cond="Good used"><span class="cond-emoji">👌</span><span class="cond-label">Good used</span></div>
+      <div class="cond-btn" data-cond="Worn"><span class="cond-emoji">👟</span><span class="cond-label">Worn</span></div>
+      <div class="cond-btn" data-cond="Heavily used"><span class="cond-emoji">🔧</span><span class="cond-label">Heavy use</span></div>
+      <div class="cond-btn" data-cond="For parts"><span class="cond-emoji">⚙️</span><span class="cond-label">For parts</span></div>
+    </div>
+  </div>
+
+  <div class="field">
+    <label class="field-label">Included accessories</label>
+    <div class="tick-list" id="tickList">
+      <div class="tick-item" data-tick="Original box"><div class="tick-box"><svg class="tick-check" viewBox="0 0 10 10" fill="none" stroke="#000" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="1.5 5 4 7.5 8.5 2.5"/></svg></div><span class="tick-text">Original box</span></div>
+      <div class="tick-item" data-tick="Dust bag"><div class="tick-box"><svg class="tick-check" viewBox="0 0 10 10" fill="none" stroke="#000" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="1.5 5 4 7.5 8.5 2.5"/></svg></div><span class="tick-text">Dust bag</span></div>
+      <div class="tick-item" data-tick="Original receipt"><div class="tick-box"><svg class="tick-check" viewBox="0 0 10 10" fill="none" stroke="#000" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="1.5 5 4 7.5 8.5 2.5"/></svg></div><span class="tick-text">Original receipt</span></div>
+      <div class="tick-item" data-tick="Hang tags"><div class="tick-box"><svg class="tick-check" viewBox="0 0 10 10" fill="none" stroke="#000" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="1.5 5 4 7.5 8.5 2.5"/></svg></div><span class="tick-text">Hang tags</span></div>
+      <div class="tick-item" data-tick="Certificate of authenticity"><div class="tick-box"><svg class="tick-check" viewBox="0 0 10 10" fill="none" stroke="#000" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="1.5 5 4 7.5 8.5 2.5"/></svg></div><span class="tick-text">Auth. certificate</span></div>
+      <div class="tick-item" data-tick="Extra laces"><div class="tick-box"><svg class="tick-check" viewBox="0 0 10 10" fill="none" stroke="#000" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="1.5 5 4 7.5 8.5 2.5"/></svg></div><span class="tick-text">Extra laces</span></div>
+      <div class="tick-item" data-tick="Insoles included"><div class="tick-box"><svg class="tick-check" viewBox="0 0 10 10" fill="none" stroke="#000" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="1.5 5 4 7.5 8.5 2.5"/></svg></div><span class="tick-text">Insoles</span></div>
+      <div class="tick-item" data-tick="Care card / booklet"><div class="tick-box"><svg class="tick-check" viewBox="0 0 10 10" fill="none" stroke="#000" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="1.5 5 4 7.5 8.5 2.5"/></svg></div><span class="tick-text">Care card</span></div>
+    </div>
+  </div>
+
+  <div class="field">
+    <label class="field-label">Photos — up to 6</label>
+    <div class="upload-zone" id="uploadZone">
+      <label class="uz-label" for="fileInput"></label>
+      <input type="file" id="fileInput" accept="image/*" multiple>
+      <div class="upload-icon-box">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/>
+        </svg>
+      </div>
+      <span class="upload-label-text">Tap to add photos</span>
+      <span class="upload-formats">JPG · PNG · WEBP · HEIC</span>
+    </div>
+  </div>
+
+  <div class="photo-grid" id="photoGrid" style="display:none"></div>
+  <p class="photo-count" id="photoCount" style="display:none"></p>
+  <button class="btn btn-primary" id="btnVerify">Start verification →</button>
+
+  <div class="stats-row">
+    <div class="stat-card"><div class="stat-label">Verified</div><div class="stat-val">2.4M+</div></div>
+    <div class="stat-card"><div class="stat-label">Accuracy</div><div class="stat-val">99.2%</div></div>
+    <div class="stat-card"><div class="stat-label">Avg. time</div><div class="stat-val">4.2s</div></div>
+  </div>
+</div>
+
+<!-- SCREEN 2: SCAN -->
+<div class="screen" id="s-scan">
+  <div>
+    <p class="eyebrow">Step 02 / 03</p>
+    <h1 class="screen-title">Analyzing<br>product</h1>
+  </div>
+  <div class="scan-strip" id="scanStrip"></div>
+  <div class="scan-main">
+    <img id="scanMainImg" src="" alt="">
+    <div class="scan-overlay"></div><div class="scan-beam"></div>
+    <div class="scan-corner tl"></div><div class="scan-corner tr"></div>
+    <div class="scan-corner bl"></div><div class="scan-corner br"></div>
+  </div>
+  <div>
+    <div class="scan-status-row">
+      <span class="scan-lbl" id="scanLbl">Initializing…</span>
+      <span class="scan-pct" id="scanPct">0%</span>
+    </div>
+    <div class="prog-track"><div class="prog-fill" id="progFill"></div></div>
+  </div>
+  <div class="checks-list" id="checksList"></div>
+</div>
+
+<!-- SCREEN 3: RESULT -->
+<div class="screen" id="s-result">
+  <div>
+    <p class="eyebrow">Step 03 / 03</p>
+    <h1 class="screen-title">Verification<br>complete</h1>
+  </div>
+
+  <div class="result-hero">
+    <div class="result-emblem">
+      <svg viewBox="0 0 24 24" fill="none" stroke="#00e87a" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M12 2l2.8 5.7 6.2.9-4.5 4.4 1.1 6.3L12 16.6l-5.6 2.7 1.1-6.3L3 8.6l6.2-.9z"/>
+      </svg>
+    </div>
+    <div class="result-info">
+      <div class="result-verdict">Authentic</div>
+      <div class="result-by">Certified by VERIF AI</div>
+      <div class="result-code" id="resultCode">VRF-—</div>
+    </div>
+    <div class="ring-wrap">
+      <svg width="68" height="68" viewBox="0 0 68 68">
+        <circle cx="34" cy="34" r="28" fill="none" stroke="#1a1a1a" stroke-width="4"/>
+        <circle id="ringCircle" cx="34" cy="34" r="28" fill="none" stroke="#00e87a" stroke-width="4"
+          stroke-linecap="round" stroke-dasharray="175.9" stroke-dashoffset="175.9"
+          transform="rotate(-90 34 34)" style="transition:stroke-dashoffset 1.4s cubic-bezier(.16,1,.3,1)"/>
+      </svg>
+      <div class="ring-inner"><span class="ring-num" id="ringNum">0</span><span class="ring-unit">SCORE</span></div>
+    </div>
+  </div>
+
+  <div class="tabs">
+    <button class="tab active" onclick="switchTab('details')">Details</button>
+    <button class="tab" onclick="switchTab('checkpoints')">Checkpoints</button>
+    <button class="tab" onclick="switchTab('export')">Export</button>
+  </div>
+
+  <div id="tab-details">
+    <!-- CONFIDENCE METER -->
+    <div class="confidence-wrap">
+      <div class="confidence-label-row">
+        <span class="confidence-title">AI Confidence level</span>
+        <span class="confidence-pct" id="confPct">0%</span>
+      </div>
+      <div class="confidence-track"><div class="confidence-fill" id="confFill"></div></div>
+      <div class="confidence-subs">
+        <span class="confidence-sub">LOW</span>
+        <span class="confidence-sub">MEDIUM</span>
+        <span class="confidence-sub">HIGH</span>
+      </div>
+    </div>
+
+    <!-- VERIFY TIME BADGE -->
+    <div class="verify-time-badge">
+      <div class="vtb-dot"></div>
+      <span class="vtb-text">Verified in <span id="verifyTimeSpan">—</span> · <span id="verifyDateSpan">—</span></span>
+    </div>
+
+    <!-- INFO GRID -->
+    <div class="info-grid" id="infoGrid"></div>
+
+    <!-- CERT BANNER -->
+    <div class="cert-banner">
+      <div class="cert-icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 12l2 2 4-4"/><path d="M12 2a10 10 0 100 20A10 10 0 0012 2z"/></svg>
+      </div>
+      <div class="cert-text"><strong>VERIF Certified Authentic</strong><br>All checkpoints passed. Certificate: <span id="certId" style="font-family:var(--mono);font-size:9px;color:#555">—</span></div>
+    </div>
+
+    <!-- PHOTO GALLERY -->
+    <div>
+      <p class="sec-hdr" style="margin-bottom:10px">Analyzed photos</p>
+      <div class="photo-gallery" id="photoGallery"></div>
+    </div>
+  </div>
+
+  <div id="tab-checkpoints" style="display:none">
+    <div class="breakdown" id="breakdown"></div>
+  </div>
+
+  <div id="tab-export" style="display:none">
+    <!-- QR CODE SECTION -->
+    <div style="background:var(--card);border:1px solid var(--border);border-radius:12px;padding:16px;display:flex;gap:16px;align-items:center;">
+      <div id="qrWrap" style="flex-shrink:0;width:140px;height:140px;background:var(--border);border-radius:10px;display:flex;align-items:center;justify-content:center;">
+        <span style="font-family:var(--mono);font-size:9px;color:var(--muted)">Loading…</span>
+      </div>
+      <div style="flex:1;min-width:0;">
+        <div style="font-size:13px;font-weight:500;color:var(--text);margin-bottom:5px;">Verification QR</div>
+        <div style="font-size:11px;color:var(--muted);line-height:1.5;margin-bottom:10px;">Scan to verify this certificate. Anyone with this code can check its authenticity.</div>
+        <div onclick="copyVerifLink()" style="background:var(--border);border:1px solid var(--border2);border-radius:7px;padding:7px 10px;font-family:var(--mono);font-size:9px;color:var(--muted);cursor:pointer;display:flex;align-items:center;gap:6px;-webkit-tap-highlight-color:transparent;">
+          <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
+          <span id="verifLinkShort" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">verif.auth/verify?cert=…</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- ACTION BUTTONS -->
+    <div class="share-actions">
+      <div class="share-btn" onclick="generatePDF()">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+        <span>PDF Receipt</span>
+      </div>
+      <div class="share-btn" onclick="copyCode()">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
+        <span>Copy Code</span>
+      </div>
+      <div class="share-btn" onclick="copyJSON()">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>
+        <span>Export JSON</span>
+      </div>
+      <div class="share-btn" onclick="shareNative()">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
+        <span>Share</span>
+      </div>
+    </div>
+
+    <button class="btn btn-green" onclick="generatePDF()">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+      Download PDF Receipt
+    </button>
+
+    <!-- DISCLAIMER -->
+    <div style="background:var(--card);border:1px solid var(--border);border-radius:12px;padding:14px 15px;">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#555" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+        <span style="font-family:var(--mono);font-size:9px;letter-spacing:.12em;color:var(--muted);text-transform:uppercase;">Disclaimer</span>
+      </div>
+      <p style="font-size:10px;color:#444;line-height:1.65;">This certificate is generated by VERIF Authentication Lab for informational purposes only. It does not constitute a legal guarantee of authenticity and should not be used as the sole basis for any purchase or sale decision. VERIF and its affiliates accept no liability for losses arising from reliance on this document. Authentication results are based on AI image analysis and are not a substitute for professional physical inspection. The QR code and certificate ID are unique to this verification session.</p>
+    </div>
+  </div>
+
+  <button class="btn btn-ghost" id="btnReset" style="margin-top:4px">
+    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 102.13-9.36L1 10"/></svg>
+    Verify another item
+  </button>
+</div>
+</div>
+
+<!-- LIGHTBOX -->
+<div class="lightbox" id="lightbox">
+  <div class="lightbox-close" id="lbClose">✕</div>
+  <img class="lightbox-img" id="lbImg" src="" alt="">
+  <div class="lightbox-counter" id="lbCounter"></div>
+  <div class="lightbox-nav">
+    <div class="lb-btn" id="lbPrev">← Prev</div>
+    <div class="lb-btn" id="lbNext">Next →</div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+/* ── HELPERS ── */
+function rnd(a,b){return Math.floor(Math.random()*(b-a+1))+a;}
+function randHex(n){return [...Array(n)].map(()=>'0123456789ABCDEF'[rnd(0,15)]).join('');}
+function randCode(){const C='ABCDEFGHJKLMNPQRSTUVWXYZ23456789';let s='VRF-';for(let i=0;i<10;i++)s+=C[rnd(0,C.length-1)];return s;}
+function randSerial(){return ['SN','REF','LOT','MFG'][rnd(0,3)]+'-'+rnd(100000,999999)+'-'+String.fromCharCode(65+rnd(0,25));}
+function randBatch(){return 'BATCH-'+rnd(1000,9999)+'-'+randHex(4);}
+function randInspector(){return 'INS-'+rnd(10,99)+String.fromCharCode(65+rnd(0,25));}
+function randChecksum(){return '0x'+randHex(8).toLowerCase();}
+function randThread(){return ['Nylon-6','Polyester-HT','Cotton-40s','Kevlar-blend'][rnd(0,3)]+' · '+rnd(8,14)+' SPI';}
+function randPantone(){return 'PMS '+rnd(100,9999)+' '+['C','U','M'][rnd(0,2)];}
+function randBlockchain(){return '0x'+randHex(16).toLowerCase();}
+
+function show(id){document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));document.getElementById(id).classList.add('active');}
+function showToast(msg){const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),2500);}
+
+/* ── STATE ── */
+let photos=[], certCode='', checkData=[], productDesc='', productBrand='', productModel='', productCondition='New with tags', totalScore=0, verifyDate=null;
+let checkedTicks=new Set();
+
+const statusMsgs=[
+  'Initializing optical scan…','Analyzing stitching vectors…','Cross-referencing brand database…',
+  'Validating serial signature…','Computing material signature…','Generating authentication report…'
+];
+
+/* ── CONDITION ── */
+document.querySelectorAll('.cond-btn').forEach(b=>{
+  b.addEventListener('click',()=>{
+    document.querySelectorAll('.cond-btn').forEach(x=>x.classList.remove('selected'));
+    b.classList.add('selected'); productCondition=b.dataset.cond;
+  });
+});
+
+/* ── TICK LIST ── */
+document.querySelectorAll('.tick-item').forEach(item=>{
+  item.addEventListener('click',()=>{
+    const key=item.dataset.tick;
+    if(checkedTicks.has(key)){checkedTicks.delete(key);item.classList.remove('checked');}
+    else{checkedTicks.add(key);item.classList.add('checked');}
+  });
+});
+
+/* ── PHOTOS ── */
+function handleFiles(e){
+  const files=Array.from(e.target?.files||e);
+  const rem=6-photos.length; if(!rem)return;
+  let loaded=0, total=Math.min(files.length,rem);
+  files.slice(0,rem).forEach(file=>{
+    if(!file.type.startsWith('image/'))return;
+    const r=new FileReader();
+    r.onload=ev=>{photos.push({name:file.name,dataUrl:ev.target.result});loaded++;if(loaded===total)renderGrid();};
+    r.readAsDataURL(file);
+  });
+  if(e.target)e.target.value='';
+}
+document.getElementById('fileInput').addEventListener('change',handleFiles);
+
+const zone=document.getElementById('uploadZone');
+zone.addEventListener('dragover',e=>{e.preventDefault();zone.classList.add('drag');});
+zone.addEventListener('dragleave',()=>zone.classList.remove('drag'));
+zone.addEventListener('drop',e=>{e.preventDefault();zone.classList.remove('drag');handleFiles(Array.from(e.dataTransfer.files));});
+
+function renderGrid(){
+  const grid=document.getElementById('photoGrid'),count=document.getElementById('photoCount'),btn=document.getElementById('btnVerify');
+  grid.innerHTML='';
+  if(!photos.length){grid.style.display='none';count.style.display='none';btn.style.display='none';return;}
+  grid.style.display='grid';count.style.display='block';btn.style.display='block';
+  count.textContent=photos.length+' photo'+(photos.length!==1?'s':'')+' selected';
+  photos.forEach((p,i)=>{
+    const d=document.createElement('div');d.className='photo-thumb';
+    d.innerHTML=`<img src="${p.dataUrl}" alt=""><div class="rm-btn" data-i="${i}">✕</div>`;
+    grid.appendChild(d);
+  });
+  grid.querySelectorAll('.rm-btn').forEach(b=>b.addEventListener('click',()=>{photos.splice(+b.dataset.i,1);renderGrid();}));
+  if(photos.length<6){
+    const a=document.createElement('div');a.className='add-more-cell';
+    a.innerHTML=`<label class="am-label" for="addMore"></label><input type="file" id="addMore" accept="image/*" multiple><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg><span>Add more</span>`;
+    grid.appendChild(a);
+    document.getElementById('addMore').addEventListener('change',handleFiles);
+  }
+}
+
+/* ── CHECK DATA ── */
+function buildCheckData(){
+  return [
+    {name:'Stitching pattern',   sub:'Thread: '+randThread(),              score:rnd(92,100)},
+    {name:'Logo & branding',     sub:'Hash: '+randChecksum(),              score:rnd(91,100)},
+    {name:'Serial number',       sub:randSerial(),                          score:rnd(94,100)},
+    {name:'Color & material',    sub:'Pantone ref: '+randPantone(),         score:rnd(89,100)},
+    {name:'Database match',      sub:'Blockchain: '+randBlockchain(),       score:rnd(95,100)},
+  ];
+}
+
+/* ── SCAN ── */
+const ICONS=[
+  `<svg viewBox="0 0 16 16" width="13" height="13" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M2 6c0-2.2 1.8-4 4-4s4 1.8 4 4-1.8 4-4 4S2 8.2 2 6z"/><path d="M9.5 9.5L14 14"/></svg>`,
+  `<svg viewBox="0 0 16 16" width="13" height="13" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="8" r="6"/><path d="M5.5 8l1.5 1.5 3-3"/></svg>`,
+  `<svg viewBox="0 0 16 16" width="13" height="13" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="12" height="8" rx="1"/><path d="M4 8h1M6 7v2M8 6v4M10 7v2M12 8h1"/></svg>`,
+  `<svg viewBox="0 0 16 16" width="13" height="13" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M8 2l1.5 3 3.5.5-2.5 2.5.5 3.5L8 10l-3 1.5.5-3.5L3 5.5 6.5 5z"/></svg>`,
+  `<svg viewBox="0 0 16 16" width="13" height="13" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="2" width="10" height="12" rx="1"/><path d="M5 6h6M5 9h4"/></svg>`,
+];
+
+function buildChecksList(data){
+  const list=document.getElementById('checksList');list.innerHTML='';
+  data.forEach((c,i)=>{
+    list.innerHTML+=`<div class="check-row" id="cr${i}">
+      <div class="check-ico idle" id="ci${i}">${ICONS[i]}</div>
+      <div class="check-info"><div class="check-name">${c.name}</div><div class="check-sub">${c.sub}</div></div>
+      <span class="check-val" id="cv${i}">${c.score}/100</span>
+    </div>`;
+  });
+}
+
+function buildStrip(){
+  const strip=document.getElementById('scanStrip');strip.innerHTML='';
+  photos.forEach((p,i)=>{
+    const d=document.createElement('div');d.className='strip-thumb'+(i===0?' current':'');d.id='sthumb'+i;
+    d.innerHTML=`<img src="${p.dataUrl}" alt=""><div class="strip-chip">P${i+1}</div>`;
+    strip.appendChild(d);
+  });
+  document.getElementById('scanMainImg').src=photos[0].dataUrl;
+}
+
+let scanStartTime=0;
+document.getElementById('btnVerify').addEventListener('click',()=>{
+  if(!photos.length)return;
+  productDesc=document.getElementById('descInput').value.trim();
+  productBrand=document.getElementById('brandInput').value.trim();
+  productModel=document.getElementById('modelInput').value.trim();
+  certCode=randCode(); checkData=buildCheckData(); verifyDate=new Date(); scanStartTime=Date.now();
+  totalScore=Math.round(checkData.reduce((a,c)=>a+c.score,0)/checkData.length);
+  buildChecksList(checkData); buildStrip(); show('s-scan'); runScan();
+});
+
+function runScan(){
+  let step=0,pi=0;
+  const fill=document.getElementById('progFill'),lbl=document.getElementById('scanLbl'),pct=document.getElementById('scanPct');
+  fill.style.width='0%';lbl.textContent='Initializing…';pct.textContent='0%';
+  for(let i=0;i<5;i++){document.getElementById('ci'+i).className='check-ico idle';document.getElementById('cv'+i).className='check-val';document.getElementById('cr'+i).className='check-row';}
+  function next(){
+    if(step>=5){fill.style.width='100%';pct.textContent='100%';lbl.textContent=statusMsgs[5];setTimeout(showResult,900);return;}
+    if(step>0&&pi<photos.length-1){pi++;document.getElementById('scanMainImg').src=photos[pi].dataUrl;document.querySelectorAll('.strip-thumb').forEach((t,i)=>t.classList.toggle('current',i===pi));}
+    lbl.textContent=statusMsgs[step+1];
+    document.getElementById('ci'+step).className='check-ico active';
+    document.getElementById('cr'+step).className='check-row active';
+    const prog=Math.round((step+1)/5*88);fill.style.width=prog+'%';pct.textContent=prog+'%';
+    setTimeout(()=>{document.getElementById('ci'+step).className='check-ico done';document.getElementById('cr'+step).className='check-row done';document.getElementById('cv'+step).className='check-val show';step++;setTimeout(next,320);},950);
+  }
+  setTimeout(next,500);
+}
+
+/* ── RESULT ── */
+let savedInspector='', savedBlockchain='';
+function showResult(){
+  const elapsed=((Date.now()-scanStartTime)/1000).toFixed(1);
+  document.getElementById('resultCode').textContent=certCode;
+  document.getElementById('certId').textContent=certCode;
+  const dateStr=verifyDate.toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'});
+  const timeStr=verifyDate.toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'});
+  savedInspector=randInspector();
+  savedBlockchain=randBlockchain();
+  const tickArr=Array.from(checkedTicks);
+
+  /* ── verify time badge ── */
+  document.getElementById('verifyTimeSpan').innerHTML=`<span>${elapsed}s</span>`;
+  document.getElementById('verifyDateSpan').innerHTML=dateStr+' · '+timeStr;
+
+  /* ── info grid ── */
+  const infos=[
+    ['Product', productDesc||'—'],
+    ['Brand', productBrand||'—'],
+    ['Model / SKU', productModel||'—'],
+    ['Condition', productCondition],
+    ['Included', tickArr.length ? tickArr.join(', ') : 'None declared'],
+    ['Inspector ID', savedInspector],
+    ['Blockchain ref', savedBlockchain.slice(0,18)+'…'],
+    ['Photos', photos.length+' analyzed'],
+  ];
+  const grid=document.getElementById('infoGrid');grid.innerHTML='';
+  infos.forEach(([l,v])=>{
+    const d=document.createElement('div');
+    d.className='info-card';
+    if(l==='Included'||l==='Blockchain ref') d.style.gridColumn='1 / -1';
+    d.innerHTML=`<div class="info-card-label">${l}</div><div class="info-card-val" style="font-size:12px">${v}</div>`;
+    grid.appendChild(d);
+  });
+
+  /* ── photo gallery ── */
+  const gallery=document.getElementById('photoGallery');gallery.innerHTML='';
+  photos.forEach((p,i)=>{
+    const d=document.createElement('div');d.className='gallery-thumb';
+    d.innerHTML=`<img src="${p.dataUrl}" alt="Photo ${i+1}"><div class="g-num">P${i+1}</div>`;
+    d.addEventListener('click',()=>openLightbox(i));
+    gallery.appendChild(d);
+  });
+
+  /* ── breakdown with score bars ── */
+  const bd=document.getElementById('breakdown');bd.innerHTML='';
+  checkData.forEach(c=>{
+    const d=document.createElement('div');d.className='bd-row';
+    d.style.flexDirection='column';d.style.alignItems='stretch';d.style.gap='6px';
+    d.innerHTML=`
+      <div style="display:flex;align-items:center;gap:10px">
+        <div class="bd-dot"></div>
+        <div class="bd-info"><div class="bd-name">${c.name}</div><div class="bd-sub">${c.sub}</div></div>
+        <span class="bd-score">${c.score}/100</span>
+      </div>
+      <div class="bd-bar-wrap"><div class="bd-bar-fill" data-score="${c.score}"></div></div>`;
+    bd.appendChild(d);
+  });
+
+  show('s-result'); switchTab('details');
+
+  /* ── animate ring ── */
+  setTimeout(()=>{document.getElementById('ringCircle').style.strokeDashoffset=175.9-(totalScore/100)*175.9;},200);
+  let cur=0;const t=setInterval(()=>{cur=Math.min(cur+2,totalScore);document.getElementById('ringNum').textContent=cur;if(cur>=totalScore)clearInterval(t);},22);
+
+  /* ── animate confidence ── */
+  const confidence=Math.min(100,Math.round(totalScore*0.97+rnd(0,3)));
+  setTimeout(()=>{
+    document.getElementById('confFill').style.width=confidence+'%';
+    document.getElementById('confPct').textContent=confidence+'%';
+  },300);
+
+  /* ── animate score bars ── */
+  setTimeout(()=>{
+    document.querySelectorAll('.bd-bar-fill').forEach(bar=>{
+      bar.style.width=bar.dataset.score+'%';
+    });
+  },500);
+}
+
+/* ── LIGHTBOX ── */
+let lbIndex=0;
+function openLightbox(i){
+  lbIndex=i;
+  document.getElementById('lightbox').classList.add('open');
+  updateLightbox();
+}
+function updateLightbox(){
+  document.getElementById('lbImg').src=photos[lbIndex].dataUrl;
+  document.getElementById('lbCounter').textContent='Photo '+(lbIndex+1)+' of '+photos.length;
+}
+document.getElementById('lbClose').addEventListener('click',()=>document.getElementById('lightbox').classList.remove('open'));
+document.getElementById('lbPrev').addEventListener('click',()=>{lbIndex=(lbIndex-1+photos.length)%photos.length;updateLightbox();});
+document.getElementById('lbNext').addEventListener('click',()=>{lbIndex=(lbIndex+1)%photos.length;updateLightbox();});
+document.getElementById('lightbox').addEventListener('click',e=>{if(e.target===document.getElementById('lightbox'))document.getElementById('lightbox').classList.remove('open');});
+
+/* ── QR CODE ── */
+const GITHUB_USER = 'VERIF-AUTH';   // ← cambia esto por tu usuario de GitHub
+const GITHUB_REPO = 'VERIF-2.0';        // ← cambia esto por el nombre de tu repo
+
+function getVerifURL(){
+  // Minimal payload — keeps QR simple enough for any camera to read
+  const payload={
+    c: certCode,
+    s: totalScore,
+    b: productBrand||null,
+    p: productDesc||null,
+    m: productModel||null,
+    k: productCondition,
+    d: verifyDate?.toISOString(),
+    i: savedInspector,
+    inc: Array.from(checkedTicks),
+    chk: checkData.map(c=>({n:c.name,u:c.sub,v:c.score})),
+  };
+  // Remove null keys to shrink size
+  Object.keys(payload).forEach(k=>{ if(payload[k]===null||payload[k]===undefined) delete payload[k]; });
+  const b64=btoa(unescape(encodeURIComponent(JSON.stringify(payload))));
+  return `https://${GITHUB_USER}.github.io/${GITHUB_REPO}/verify.html#${b64}`;
+}
+function getQRUrl(text,size=120){
+  return `https://api.qrserver.com/v1/create-qr-code/?size=${size}x${size}&data=${encodeURIComponent(text)}&bgcolor=080808&color=00e87a&format=png`;
+}
+function copyVerifLink(){
+  const url=getVerifURL();
+  navigator.clipboard.writeText(url).then(()=>showToast('Verification link copied ✓')).catch(()=>showToast('Copy failed'));
+}
+function renderQR(){
+  const url=getVerifURL();
+  const wrap=document.getElementById('qrWrap');
+  if(!wrap)return;
+  wrap.innerHTML=`<img src="${getQRUrl(url,140)}" alt="QR" style="width:140px;height:140px;border-radius:10px;display:block;" onerror="this.parentElement.innerHTML='<span style=\\'font-family:var(--mono);font-size:9px;color:var(--muted)\\'>QR unavailable offline</span>'">`;
+  const shortEl=document.getElementById('verifLinkShort');
+  if(shortEl)shortEl.textContent=`${GITHUB_USER}.github.io/${GITHUB_REPO}/verify.html#${certCode}…`;
+}
+
+/* ── TABS ── */
+function switchTab(name){
+  ['details','checkpoints','export'].forEach(t=>{
+    const el=document.getElementById('tab-'+t);
+    el.style.display=t===name?'flex':'none';
+    if(t===name)el.style.flexDirection='column';
+  });
+  document.querySelectorAll('.tab').forEach((b,i)=>b.classList.toggle('active',['details','checkpoints','export'][i]===name));
+  if(name==='export')renderQR();
+}
+
+/* ── EXPORT ── */
+function copyCode(){navigator.clipboard.writeText(certCode).then(()=>showToast('Certificate code copied ✓')).catch(()=>showToast(certCode));}
+function copyJSON(){
+  const data={certificate:certCode,date:verifyDate?.toISOString(),product:{description:productDesc||null,brand:productBrand||null,model:productModel||null,condition:productCondition},verification:{overallScore:totalScore,status:'AUTHENTIC',photosAnalyzed:photos.length,inspector:savedInspector,blockchainRef:savedBlockchain},checkpoints:checkData.map(c=>({name:c.name,identifier:c.sub,score:c.score}))};
+  navigator.clipboard.writeText(JSON.stringify(data,null,2)).then(()=>showToast('JSON copied ✓')).catch(()=>showToast('Copy failed'));
+}
+function shareNative(){
+  const text=`VERIF Authentication Receipt\nProduct: ${productDesc||'—'}\nBrand: ${productBrand||'—'}\nScore: ${totalScore}/100\nCertificate: ${certCode}\nStatus: ✅ AUTHENTIC\n\n${getVerifURL()}`;
+  if(navigator.share)navigator.share({title:'VERIF Receipt',text,url:getVerifURL()}).catch(()=>{});
+  else navigator.clipboard.writeText(text).then(()=>showToast('Copied ✓')).catch(()=>showToast('Share not supported'));
+}
+
+/* ── PDF ── */
+async function generatePDF(){
+  const {jsPDF}=window.jspdf;
+  const doc=new jsPDF({unit:'mm',format:'a4'});
+  const W=210, H=297, L=18, R=192, CW=R-L;
+  const dateStr=verifyDate.toLocaleDateString('en-GB',{day:'2-digit',month:'long',year:'numeric'});
+  const timeStr=verifyDate.toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'});
+
+  // shorthand helpers
+  const F=(r,g,b)=>doc.setFillColor(r,g,b);
+  const S=(r,g,b)=>doc.setDrawColor(r,g,b);
+  const T=(r,g,b)=>doc.setTextColor(r,g,b);
+  const LW=(w)=>doc.setLineWidth(w);
+  const sans=(sz,bold)=>{doc.setFont('helvetica',bold?'bold':'normal');doc.setFontSize(sz);}
+  const mono=(sz,bold)=>{doc.setFont('courier',bold?'bold':'normal');doc.setFontSize(sz);}
+  const CS=(v)=>doc.setCharSpace(v);
+  const box=(x,y,w,h)=>doc.rect(x,y,w,h,'F');
+  const rbox=(x,y,w,h,r=2)=>doc.roundedRect(x,y,w,h,r,r,'F');
+  const rboxS=(x,y,w,h,r=2)=>doc.roundedRect(x,y,w,h,r,r,'S');
+  const ln=(x1,y1,x2,y2)=>doc.line(x1,y1,x2,y2);
+  const tx=(str,x,y,opt)=>doc.text(String(str),x,y,opt||{});
+  const hr=(y)=>{S(24,24,24);LW(.2);ln(L,y,R,y);};
+
+  /* PAGE BG */
+  F(8,8,8); box(0,0,W,H);
+
+  /* ═══ HEADER ═══ */
+  F(12,12,12); box(0,0,W,32);
+  S(22,22,22); LW(.25); ln(0,32,W,32);
+  // dot + VERIF
+  F(240,240,240); doc.circle(L,16,2,'F');
+  sans(12,true); T(240,240,240); CS(4); tx('VERIF',L+6,18.5); CS(0);
+  // right side: version only (no overlap)
+  sans(7,false); T(60,60,60); tx('Authentication Lab · v2.5',R,18.5,{align:'right'});
+
+  /* ═══ HERO ═══ */
+  // green glow blob (right side, won't overlap text)
+  F(0,22,10); doc.circle(R+15,70,55,'F');
+
+  // checkmark circle
+  S(0,232,122); LW(.6); doc.circle(L+11,67,10);
+  LW(1.3); ln(L+5.5,67,L+9,71); ln(L+9,71,L+17,61.5);
+
+  // AUTHENTIC headline
+  sans(24,true); T(0,232,122); CS(2); tx('AUTHENTIC',L+27,64); CS(0);
+  sans(9,false); T(70,70,70); tx('Certified by VERIF AI Authentication System',L+27,71.5);
+  mono(8,false); T(45,45,45); tx(certCode,L+27,78.5);
+
+  let y=90; hr(y);
+
+  /* ═══ PRODUCT BLOCK ═══ */
+  if(productDesc||productBrand||productModel){
+    y+=10;
+    sans(7,false); T(60,60,60); CS(1.5); tx('PRODUCT',L,y); CS(0);
+    y+=7;
+    const fullName=[(productBrand||''), (productDesc||'')].filter(Boolean).join(' — ');
+    sans(11,true); T(210,210,210);
+    const lines=doc.splitTextToSize(fullName||'—',CW);
+    tx(lines,L,y); y+=lines.length*6;
+    if(productModel){
+      y+=3; sans(8,false); T(60,60,60); tx('Model / SKU:',L,y);
+      mono(8,true); T(160,160,160); tx(productModel,L+28,y);
+    }
+    y+=3;
+    sans(8,false); T(60,60,60); tx('Condition:',L,y);
+    sans(8,true); T(190,190,190); tx(productCondition,L+23,y);
+    y+=8; hr(y);
+  }
+
+  /* ═══ INCLUDED ACCESSORIES ═══ */
+  const tickArr=Array.from(checkedTicks);
+  if(tickArr.length>0){
+    y+=10;
+    sans(7,false); T(60,60,60); CS(1.5); tx('INCLUDED ACCESSORIES',L,y); CS(0);
+    y+=7;
+    // draw pill badges
+    let px=L, pillH=8;
+    tickArr.forEach(item=>{
+      const pw=doc.getTextWidth(item)+8;
+      if(px+pw>R){px=L;y+=pillH+4;}
+      F(20,20,20); rbox(px,y-6,pw,pillH,2);
+      S(30,30,30); LW(.15); rboxS(px,y-6,pw,pillH,2);
+      // green dot inside pill
+      F(0,232,122); doc.circle(px+4,y-2,1.2,'F');
+      sans(7.5,false); T(160,160,160); tx(item,px+8,y);
+      px+=pw+4;
+    });
+    y+=10; hr(y);
+  }
+
+  /* ═══ META GRID (2 columns × 3 rows) ═══ */
+  y+=10;
+  const metaItems=[
+    ['DATE', dateStr], ['TIME', timeStr],
+    ['PHOTOS', photos.length+' analyzed'], ['OVERALL SCORE', totalScore+' / 100'],
+    ['CERT. ID', certCode], ['STATUS', 'PASSED'],
+  ];
+  const mc=[L, L+96]; // 2 columns
+  metaItems.forEach(([l,v],i)=>{
+    const cx=mc[i%2], cy=y+Math.floor(i/2)*20;
+    sans(7,false); T(60,60,60); CS(1.5); tx(l,cx,cy); CS(0);
+    if(l==='STATUS'){sans(10,true); T(0,232,122);}
+    else if(l==='CERT. ID'){mono(9,true); T(100,100,100);}
+    else{sans(10,true); T(210,210,210);}
+    tx(v,cx,cy+7);
+  });
+
+  y+=66; hr(y);
+
+  /* ═══ EXTRA DETAILS ROW ═══ */
+  y+=10;
+  const extras=[
+    ['INSPECTOR ID', savedInspector],
+    ['BLOCKCHAIN REF', savedBlockchain.slice(0,22)+'…'],
+    ['VERIFICATION ENGINE', 'VERIF-AI v2.5'],
+  ];
+  const ec=[L, L+62, L+124];
+  extras.forEach(([l,v],i)=>{
+    sans(7,false); T(60,60,60); CS(1.5); tx(l,ec[i],y); CS(0);
+    mono(8,true); T(150,150,150); tx(v,ec[i],y+7);
+  });
+
+  y+=22; hr(y);
+
+  /* ═══ CHECKPOINTS TABLE ═══ */
+  y+=11;
+  sans(7,false); T(60,60,60); CS(1.5); tx('AUTHENTICATION CHECKPOINTS',L,y); CS(0);
+  y+=8;
+
+  checkData.forEach((c,idx)=>{
+    const rowH=19;
+    // page overflow guard — if row would go past footer safe zone, add new page
+    if(y+rowH > H-20){
+      doc.addPage();
+      F(8,8,8); box(0,0,W,H);
+      y=20;
+    }
+    // alternating bg
+    F(idx%2===0?17:14, idx%2===0?17:14, idx%2===0?17:14);
+    rbox(L,y,CW,rowH,2);
+    S(24,24,24); LW(.18); rboxS(L,y,CW,rowH,2);
+    // dot
+    F(0,232,122); doc.circle(L+7,y+rowH/2,1.7,'F');
+    // name
+    sans(9.5,false); T(155,155,155); tx(c.name,L+13,y+7.5);
+    // sub — clamp to available width so it never overflows the pill
+    const subMaxW=CW-50;
+    const subStr=doc.splitTextToSize(c.sub, subMaxW)[0]; // only first line
+    mono(7,false); T(50,50,50); tx(subStr,L+13,y+13.5);
+    // score pill
+    const pw=26;
+    F(0,22,11); rbox(R-pw,y+5,pw,9,2);
+    mono(8.5,true); T(0,232,122); tx(c.score+'/100',R-pw/2,y+11,{align:'center'});
+    y+=rowH+2;
+  });
+
+  /* ═══ SCORE BAR ═══ */
+  y+=6;
+  if(y > H-50){doc.addPage();F(8,8,8);box(0,0,W,H);y=20;}
+  hr(y); y+=11;
+  sans(7,false); T(60,60,60); CS(1.5); tx('OVERALL SCORE',L,y); CS(0);
+  mono(11,true); T(0,232,122); tx(totalScore+' / 100',R,y,{align:'right'});
+  y+=6;
+  F(20,20,20); rbox(L,y,CW,5,2);
+  const fw=(totalScore/100)*CW;
+  F(0,200,100); rbox(L,y,fw,5,2);
+
+  /* ═══ PHOTOS STRIP ═══ */
+  y+=14;
+  if(photos.length>0){
+    if(y > H-55){doc.addPage();F(8,8,8);box(0,0,W,H);y=20;}
+    hr(y); y+=11;
+    sans(7,false); T(60,60,60); CS(1.5); tx('ANALYZED PHOTOS',L,y); CS(0);
+    y+=5;
+    const ts=28, gap=4, maxShow=Math.min(photos.length,6);
+    for(let i=0;i<maxShow;i++){
+      const tx2=L+i*(ts+gap);
+      if(tx2+ts>R)break;
+      F(18,18,18); rbox(tx2,y,ts,ts,2);
+      try{doc.addImage(photos[i].dataUrl,'JPEG',tx2,y,ts,ts,'','FAST');}catch(e){}
+      S(28,28,28); LW(.18); rboxS(tx2,y,ts,ts,2);
+      mono(6,false); T(55,55,55); doc.text('P'+(i+1),tx2+ts/2,y+ts+4,{align:'center'});
+    }
+    y+=ts+10;
+  }
+
+  /* ═══ FOOTER ═══ */
+  // QR code in bottom-right corner
+  const qrSize=28;
+  const qrX=R-qrSize;
+  const qrY=H-14-qrSize-6;
+  try{
+    const qrDataUrl=await loadQRAsDataUrl(getVerifURL(),qrSize*4);
+    if(qrDataUrl){
+      F(14,14,14); rbox(qrX-2,qrY-2,qrSize+4,qrSize+4,2);
+      doc.addImage(qrDataUrl,'PNG',qrX,qrY,qrSize,qrSize,'','FAST');
+    }
+  }catch(e){}
+
+  // Disclaimer line above footer
+  if(y < H-28){
+    y=H-28;
+    sans(6,false); T(35,35,35);
+    const disclaimer='Disclaimer: This certificate is for informational purposes only and does not constitute a legal guarantee. VERIF accepts no liability for losses arising from reliance on this document.';
+    const dlines=doc.splitTextToSize(disclaimer, CW-qrSize-8);
+    tx(dlines,L,y);
+  }
+
+  F(11,11,11); box(0,H-14,W,14);
+  S(20,20,20); LW(.2); ln(0,H-14,W,H-14);
+  sans(6.5,false); T(44,44,44);
+  tx('VERIF Authentication Lab  ·  '+certCode+'  ·  '+dateStr+'  ·  verif.auth/verify?cert='+certCode, W/2, H-5.5,{align:'center'});
+
+  doc.save('VERIF-Receipt-'+certCode+'.pdf');
+  showToast('PDF downloaded ✓');
+}
+
+async function loadQRAsDataUrl(text, sizePx){
+  return new Promise((res)=>{
+    const img=new Image();
+    img.crossOrigin='anonymous';
+    img.onload=()=>{
+      const c=document.createElement('canvas');c.width=sizePx;c.height=sizePx;
+      const ctx=c.getContext('2d');ctx.drawImage(img,0,0,sizePx,sizePx);
+      res(c.toDataURL('image/png'));
+    };
+    img.onerror=()=>res(null);
+    img.src=getQRUrl(text,sizePx);
+  });
+}
+
+/* ── RESET ── */
+document.getElementById('btnReset').addEventListener('click',()=>{
+  photos=[];certCode='';checkData=[];productDesc='';productBrand='';productModel='';totalScore=0;verifyDate=null;savedInspector='';savedBlockchain='';checkedTicks=new Set();scanStartTime=0;
+  ['descInput','brandInput','modelInput'].forEach(id=>document.getElementById(id).value='');
+  document.querySelectorAll('.cond-btn').forEach((b,i)=>b.classList.toggle('selected',i===0));
+  document.querySelectorAll('.tick-item').forEach(t=>t.classList.remove('checked'));
+  productCondition='New with tags';
+  renderGrid();
+  document.getElementById('ringCircle').style.strokeDashoffset='175.9';
+  document.getElementById('ringNum').textContent='0';
+  document.getElementById('confFill').style.width='0%';
+  document.getElementById('confPct').textContent='0%';
+  document.getElementById('verifyTimeSpan').innerHTML='—';
+  document.getElementById('verifyDateSpan').innerHTML='—';
+  ['breakdown','photoChips','checksList','infoGrid','photoGallery'].forEach(id=>{const el=document.getElementById(id);if(el)el.innerHTML='';});
+  show('s-upload');
+});
+/* ── SERVICE WORKER (PWA) ── */
+if('serviceWorker' in navigator){
+  window.addEventListener('load',()=>{
+    navigator.serviceWorker.register('./sw.js').catch(()=>{});
+  });
+}
+</script>

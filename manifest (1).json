@@ -1,0 +1,26 @@
+{
+  "name": "VERIF Authentication Lab",
+  "short_name": "VERIF",
+  "description": "AI-powered product authentication",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#080808",
+  "theme_color": "#080808",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'><rect width='512' height='512' fill='%23080808' rx='110'/><circle cx='100' cy='256' r='40' fill='%23f0f0f0'/><text x='160' y='290' font-family='monospace' font-size='140' font-weight='bold' fill='%23f0f0f0' letter-spacing='8'>VERIF</text><circle cx='420' cy='380' r='28' fill='%2300e87a'/><path d='M408 380 l8 8 16-16' stroke='%23000' stroke-width='5' stroke-linecap='round' stroke-linejoin='round' fill='none'/></svg>",
+      "sizes": "512x512",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 192 192'><rect width='192' height='192' fill='%23080808' rx='42'/><circle cx='38' cy='96' r='15' fill='%23f0f0f0'/><text x='60' y='110' font-family='monospace' font-size='52' font-weight='bold' fill='%23f0f0f0' letter-spacing='3'>VERIF</text></svg>",
+      "sizes": "192x192",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ],
+  "categories": ["utilities", "shopping"],
+  "lang": "en"
+}
