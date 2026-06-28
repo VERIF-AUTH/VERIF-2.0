@@ -319,7 +319,9 @@ function buildResult(d){
   const date   = d.date || d.d || null;
   const included = d.included || d.inc || [];
   const checkpoints = (d.checkpoints || d.chk || []).map(c=>({
-    name: c.name||c.n, sub: c.sub||c.u, score: c.score??c.v
+    name: c.name||c.n||'—',
+    sub:  c.sub||c.u||'',   // may be absent in lean QR payload
+    score: c.score??c.v??0
   }));
 
   /* cert code */

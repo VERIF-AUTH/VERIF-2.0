@@ -1,18 +1,17 @@
-const CACHE = 'verif-v1';
+const CACHE = 'verif-v2';
+const BASE = '/VERIF-2.0/';
 const ASSETS = [
-  './',
-  './index.html',
-  './verify.html',
-  './manifest.json',
-  'https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=Space+Mono:wght@400;700&display=swap',
-  'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js',
+  BASE,
+  BASE + 'index.html',
+  BASE + 'verify.html',
+  BASE + 'manifest.json',
 ];
 
 self.addEventListener('install', e => {
   e.waitUntil(
-    caches.open(CACHE).then(cache => {
-      return Promise.allSettled(ASSETS.map(url => cache.add(url).catch(() => {})));
-    })
+    caches.open(CACHE).then(cache =>
+      Promise.allSettled(ASSETS.map(url => cache.add(url).catch(() => {})))
+    )
   );
   self.skipWaiting();
 });
@@ -27,7 +26,16 @@ self.addEventListener('activate', e => {
 });
 
 self.addEventListener('fetch', e => {
+  // Only handle same-origin requests under our BASE path
+  const url = new URL(e.request.url);
+  if (!url.pathname.startsWith(BASE)) return;
   e.respondWith(
-    caches.match(e.request).then(cached => cached || fetch(e.request).catch(() => cached))
+    caches.match(e.request).then(cached =>
+      cached || fetch(e.request).then(res => {
+        const clone = res.clone();
+        caches.open(CACHE).then(c => c.put(e.request, clone));
+        return res;
+      }).catch(() => cached)
+    )
   );
 });
