@@ -288,7 +288,10 @@ function parsePayload(){
   const hash=window.location.hash.slice(1);
   if(!hash) return null;
   try{
-    const json=decodeURIComponent(escape(atob(hash)));
+    // Reverse URL-safe Base64: -→+ and _→/ then restore padding
+    const b64=hash.replace(/-/g,'+').replace(/_/g,'/');
+    const padded=b64+('='.repeat((4-b64.length%4)%4));
+    const json=decodeURIComponent(escape(atob(padded)));
     return JSON.parse(json);
   }catch(e){return null;}
 }
